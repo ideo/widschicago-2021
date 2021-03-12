@@ -4,7 +4,6 @@ plotting.
 """
 import sys
 
-import numpy as np
 import vsketch
 from shapely.affinity import translate
 from shapely.geometry import LineString, MultiLineString, Polygon
@@ -23,10 +22,10 @@ N_SLICES = 10
 SLICE_SPACING = (HEIGHT - 2 * MARGIN - MAIN_HEIGHT) / (N_SLICES - 1)
 
 filename = sys.argv[1]
-ts = zoom_timeseries(filename, 5)
+ts, t_end = zoom_timeseries(filename, 5)
 ts_max = max(v for t, v in ts)
+x = [N_SLICES * W * (t / t_end) for t, v in ts]
 y = [MAIN_HEIGHT * (1 - (v / ts_max)) for t, v in ts]
-x = list(np.linspace(0, N_SLICES * W, len(y)))
 poly = list(zip(x, y))
 poly.append((x[-1], 3 * MAIN_HEIGHT))
 poly.append((x[0], 3 * MAIN_HEIGHT))
@@ -38,16 +37,18 @@ sketch._center_on_page = False
 
 sketch.stroke(1)
 poly = Polygon(poly)
+# sketch.geometry(poly)
+    
 all_poly = []
 while poly:
     all_poly.append(poly)
     poly = poly.buffer(-PEN_SPACING * MM)
 
 baseline = Polygon([
-    (-MARGIN, MAIN_HEIGHT),
-    (WIDTH * N_SLICES, MAIN_HEIGHT),
-    (WIDTH * N_SLICES, 4 * MAIN_HEIGHT),
-    (-MARGIN, 4 * MAIN_HEIGHT),
+    (x[0], MAIN_HEIGHT),
+    (x[-1], MAIN_HEIGHT),
+    (x[-1], 4 * MAIN_HEIGHT),
+    (x[0], 4 * MAIN_HEIGHT),
 ])
 
 all_lines = []
@@ -65,6 +66,7 @@ for poly in all_poly:
             all_lines.append(line)
 
 parent = MultiLineString(all_lines)
+# sketch.geometry(parent)
 
 sketch.stroke(1)
 for i in range(N_SLICES):

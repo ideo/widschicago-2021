@@ -16,7 +16,7 @@ PAUSE_PROPORTION = {
 
 
 def remove_speaker(text):
-    return text.split(":", 1)[1].strip()
+    return text.split(":", 1)[-1].strip()
 
 
 def stresses(word):
@@ -120,7 +120,7 @@ def zoom_timeseries(filename, window_size=5):
     result = []
     for t, v in new_ts.moving_average(0.1, half_window / 2):
         result.append((t, v))
-
+        
     for i, (t, v) in enumerate(result):
         if v > 0:
             min_i = i - 1
@@ -135,12 +135,14 @@ def zoom_timeseries(filename, window_size=5):
     result = result[min_i:max_i]
     min_t = result[0][0]
 
-    result = [(t - min_t, v) for t, v in result]
-
-    return result
+    # result = [(t - min_t, v) for t, v in result]
+    
+    return result, max_t
 
 
 if __name__ == "__main__":
     filename = sys.argv[1]
-    for t, v in zoom_timeseries(filename, window_size):
+    window_size = 5
+    ts, t_end = zoom_timeseries(filename, window_size)
+    for t, v in ts:
         print(t, v)
