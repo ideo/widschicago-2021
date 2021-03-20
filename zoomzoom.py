@@ -1,6 +1,8 @@
 """Estimate speaking speed time series from zoom transcript.
 
 """
+import pprint
+import collections
 import statistics
 import string
 import sys
@@ -14,9 +16,21 @@ PAUSE_PROPORTION = {
     "4": 10,
 }
 
+ALIAS = {
+    'Devanshi Verma': 'Devanshi Verma - Organizer',
+    'Jane Zanzig | ( she / her) | IDEO': 'Jane Zanzig - Organizer( she / her)',
+    'Kayla Schroeder': 'Kayla Schroeder - Organizer',
+}
 
-def remove_speaker(text):
-    return text.split(":", 1)[-1].strip()
+
+def split_speaker(raw):
+    speaker, text = None, ''
+    try:
+        speaker, text = raw.split(":", 1)
+    except ValueError:
+        text = raw
+    speaker = ALIAS.get(speaker, speaker)
+    return speaker, text.strip()
 
 
 def stresses(word):
@@ -58,7 +72,7 @@ def estimate_timing(filename):
     pieces = []
     for caption in webvtt.read(filename):
         start, end = caption.start_in_seconds, caption.end_in_seconds
-        text = remove_speaker(caption.text)
+        speaker, text = split_speaker(caption.text)
         all_stresses = []
         for word in text.split():
             stress_string = stresses(word)
@@ -78,18 +92,38 @@ def estimate_timing(filename):
     tempo_distribution = remove_outliers(pieces)
     beats_per_second = max(tempo_distribution)
 
-    return beats_per_second
+    return 6
+    # return beats_per_second
 
+def time_to_seconds(time):
+    hour, minute, second = [int(float(_)) for _ in time.split(':')]
+    return hour * 3600 + minute * 60 + second
 
-def zoom_timeseries(filename, window_size=5):
+def zoom_timeseries(filename, window_size=5, resolution=0.1, speaker_list=None):
 
     beats_per_second = estimate_timing(filename)
-
-    counter = 0
-    ts = traces.TimeSeries(default=0)
+    print(f'beats per second: {beats_per_second}', file=sys.stderr)
+    
+    speaker_ts = traces.TimeSeries(default=None)
     for caption in webvtt.read(filename):
         start, end = caption.start_in_seconds, caption.end_in_seconds
-        text = remove_speaker(caption.text)
+        speaker, text = split_speaker(caption.text)
+        if speaker is not None:
+            speaker_ts.set(start, speaker, compact=True)
+
+    unique_speakers = set(speaker for t, speaker in speaker_ts)
+            
+    counter, cumulative_ts = {}, {}
+    for speaker in unique_speakers:
+        counter[speaker] = 0
+        cumulative_ts[speaker] = traces.TimeSeries(default=0)
+
+    for caption in webvtt.read(filename):
+
+        start, end = caption.start_in_seconds, caption.end_in_seconds
+        _, text = split_speaker(caption.text)
+        speaker = speaker_ts[start]
+                
         all_stresses = []
         for word in text.split():
             stress_string = stresses(word)
@@ -98,51 +132,53 @@ def zoom_timeseries(filename, window_size=5):
             elif word.endswith("."):
                 stress_string += "4"
             all_stresses.append(stress_string)
+            
         stress_pattern = "".join(all_stresses)
         stress_pattern = stress_pattern.rstrip("4")
+        
         t = start
         for stress_type in stress_pattern:
             if stress_type in {"0", "1", "2"}:
-                ts[t] = counter
-                counter += 1
+                cumulative_ts[speaker][t] = counter[speaker]
+                counter[speaker] += 1
             t += PAUSE_PROPORTION.get(stress_type, 1) / beats_per_second
 
-    max_t = t
+        # print(speaker)
+        # print(caption.text)
+        # print(text)
+        # print(stress_pattern)
+        # print(syllable_counter[speaker])
+        # print()
+            
+    # pprint.pprint(counter)
 
-    new_ts = traces.TimeSeries(default=0)
-    half_window = window_size
-    t = -half_window - 1
-    while t <= (max_t + 2 * half_window):
-        n_syllables = ts[t + half_window] - ts[t - half_window]
-        new_ts[t] = n_syllables
-        t += 1
-
-    result = []
-    for t, v in new_ts.moving_average(0.1, half_window / 2):
-        result.append((t, v))
-        
-    for i, (t, v) in enumerate(result):
-        if v > 0:
-            min_i = i - 1
-            break
-
-    for i in range(len(result) - 1, 0, -1):
-        t, v = result[i]
-        if v > 0:
-            max_i = i + 2
-            break
-
-    result = result[min_i:max_i]
-    min_t = result[0][0]
-
-    # result = [(t - min_t, v) for t, v in result]
+    if speaker_list is None:
+        speaker_list = list(sorted(cumulative_ts.keys()))
     
-    return result, max_t
+    result = []
+    for speaker in speaker_list:
+
+        ts = cumulative_ts[speaker]
+
+        syllable_ts = traces.TimeSeries(default=0)
+        half_window = window_size
+        t = int(ts.first_key()) - (2 * half_window)
+        while t <= (ts.last_key() + (2 * half_window)):
+            n_syllables = ts[t + half_window] - ts[t - half_window]
+            syllable_ts.set(t, n_syllables, compact=True)
+            t += 1
+
+        result.append((
+            speaker,
+            syllable_ts.moving_average(0.1, half_window / 2),
+        ))
+
+    return result
 
 
 if __name__ == "__main__":
     filename = sys.argv[1]
     window_size = 5
-    ts, t_end = zoom_timeseries(filename, window_size)
+    ts, t_end = zoom_timeseries(filename, window_size, 1)
     for t, v in ts:
         print(t, v)
