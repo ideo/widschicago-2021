@@ -30,6 +30,7 @@ def split_speaker(raw):
     except ValueError:
         text = raw
     speaker = ALIAS.get(speaker, speaker)
+    # speaker = 'all'
     return speaker, text.strip()
 
 
@@ -150,7 +151,7 @@ def zoom_timeseries(filename, window_size=5, resolution=0.1, speaker_list=None):
         # print(syllable_counter[speaker])
         # print()
             
-    # pprint.pprint(counter)
+    pprint.pprint(counter)
 
     if speaker_list is None:
         speaker_list = list(sorted(cumulative_ts.keys()))

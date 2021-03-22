@@ -10,6 +10,8 @@ pronouncing = "*"
 traces = "*"
 webvtt-py = "*"
 vsketch = {git = "https://github.com/abey79/vsketch"}
+qrcode = {extras = ["pil"], version = "*"}
+networkx = "*"
 
 [dev-packages]
 

@@ -1,6 +1,8 @@
 """Generate an SVG visualization of a .vtt Zoom transcript for pen
 plotting.
 
+Pretty hacky... ¯\_(ツ)_/¯
+
 """
 import sys
 
@@ -10,21 +12,21 @@ from shapely.geometry import LineString, MultiLineString, Polygon
 
 from zoomzoom import zoom_timeseries, time_to_seconds
 
-# Panel 00:42:34.230 01:17:49.680
+# Entire conference: 00:01:48.570 02:56:50.580
 # 
-# Kristi Angel 01:40:52.620 01:45:29.850
-# Lorena Mesa 01:46:27.030 01:52:19.500
-# Alicia Boyd 01:52:47.910 01:55:28.920
-# Marynia Kolak 01:56:00.930 01:59:58.470
-# Vicky Kalogera 02:00:31.890 02:07:27.540
-# Marshini Chetty 02:07:51.390 02:12:25.560
-# Rebecca BurWei 02:12:44.910 02:16:30.450
-# Bo Peng 02:16:48.420 02:21:08.070
-# Hanna Parker 02:21:30.630 02:25:04.110
+# Panel: 00:42:34.230 01:17:49.680
+# 
+# Kristi Angel: 01:40:52.620 01:45:29.850
+# Lorena Mesa: 01:46:27.030 01:52:19.500
+# Alicia Boyd: 01:52:47.910 01:55:28.920
+# Marynia Kolak: 01:56:00.930 01:59:58.470
+# Vicky Kalogera: 02:00:31.890 02:07:27.540
+# Marshini Chetty: 02:07:51.390 02:12:25.560
+# Rebecca BurWei: 02:12:44.910 02:16:30.450
+# Bo Peng: 02:16:48.420 02:21:08.070
+# Hanna Parker: 02:21:30.630 02:25:04.110
 
-# PEN_SPACING = 0.7
-# OFFSET_MULTIPLIER = 1
-PEN_SPACING = 0.6
+PEN_SPACING = 0.7
 OFFSET_MULTIPLIER = 1.02
 WIDTH = 4
 HEIGHT = 6
@@ -43,11 +45,12 @@ end = time_to_seconds(sys.argv[3])
 # speaker_list = ['Lucia Petito', 'Teodora Szasz', 'Dessa Gypalo', 'Ilana Marcus']
 # speaker_list = ['Kristi Angel', 'Lorena Mesa']
 # speaker_list = ['Alicia Boyd', 'Marynia Kolak']
-speaker_list = ['Vicky Kalogera', 'Marshini Chetty']
+# speaker_list = ['Vicky Kalogera', 'Marshini Chetty']
 # speaker_list = ['Rebecca BurWei', 'Bo Peng', 'Hanna Parker']
-print('hi', start, end)
+speaker_list = ['all']
+print('seconds:', start, end)
 
-window_size = 5
+window_size = 45 # moving average window (seconds)
 outfilename = f"viz_{filename}_{window_size}_{start}:{end}.svg"
 
 sketch = vsketch.Vsketch()
