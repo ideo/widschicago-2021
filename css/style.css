@@ -507,6 +507,10 @@ there.
 .color-4 {
     color: #ff3319;
 }
+.color-5 {
+  color: #444444; 
+}
+
 .main {
     font-size: 3.0rem;
     line-height: 1.3;
